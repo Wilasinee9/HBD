@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
 
-# --- เพิ่ม 2 บรรทัดนี้ที่บนสุด เพื่อแก้ปัญหา Segmentation fault ---
+# --- แก้ไขปัญหา Segmentation fault บน Streamlit Cloud ด้วยการตั้งค่า Backend ---
 import matplotlib
 matplotlib.use('Agg') 
-# -------------------------------------------------------------
-
 import matplotlib.pyplot as plt
+# ------------------------------------------------------------------------
 
-# ตั้งค่าหน้าเว็บและดีไซน์เบื้องต้น (โค้ดส่วนที่เหลือเหมือนเดิมทั้งหมด...)
+# 1. ตั้งค่าหน้าเว็บและดีไซน์เบื้องต้น
 st.set_page_config(
     page_title="Thai Tax Calculator Pro 🇹🇭",
     page_icon="💰",
@@ -51,17 +50,6 @@ st.markdown("""
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         margin-top: 15px;
     }
-    
-    /* สไตล์ข้อความแนะนำในการประหยัดภาษี */
-    .tips-box {
-        background-color: #FFFBEB;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #FEF3C7;
-        color: #D97706;
-        font-size: 14px;
-        margin-top: 10px;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -73,7 +61,6 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ยินดีต้อนรับผู้ใช้งาน
 st.write("กรอกข้อมูลรายได้และค่าลดหย่อนของคุณในแถบด้านล่าง ระบบจะคำนวณฐานภาษีแบบขั้นบันไดและแนะนำวิธีประหยัดภาษีให้อัตโนมัติ")
 
 # --- ส่วนที่ 1: รายได้ ---
@@ -94,7 +81,7 @@ with income_col2:
 st.info(f"💰 **รายได้คำนวณรวมทั้งปีของคุณ:** {total_income:,.2f} บาท")
 
 
-# --- ส่วนที่ 2: ค่าลดหย่อน (จัดกลุ่มเพื่อความสวยงามและใช้งานง่าย) ---
+# --- ส่วนที่ 2: ค่าลดหย่อน ---
 st.markdown("### 🏠 2. ค่าลดหย่อนและการออมเงิน")
 
 exp1, exp2 = st.columns(2)
@@ -111,43 +98,38 @@ with exp1:
     family_total = allowance_self + allowance_spouse + allowance_children
 
 with exp2:
-    st.markdown("**🛡️ ประกัน สังคม และ ประกันชีวิต**")
+    st.markdown("**🛡️ ประกันสังคม และประกันชีวิต**")
     social_security = st.number_input("ประกันสังคมทั้งปี (บาท)", min_value=0, max_value=9000, value=9000, step=100)
     life_insurance = st.number_input("เบี้ยประกันชีวิต / ประกันสุขภาพ (สูงสุด 100,000 บาท)", min_value=0, max_value=100000, value=0, step=5000)
     insurance_total = social_security + life_insurance
 
-# ส่วนลดหย่อนการลงทุนเชิงรุก (ฟีเจอร์เด่นช่วยวางแผนภาษี)
+# ส่วนลดหย่อนการลงทุน
 st.markdown("**📈 กองทุนรวมเพื่อการออมและการลงทุน (สิทธิประโยชน์ภาษี)**")
 invest_col1, invest_col2, invest_col3 = st.columns(3)
 
 with invest_col1:
-    # SSF ซื้อได้สูงสุด 30% ของเงินได้ ไม่เกิน 200,000
     max_ssf = min(total_income * 0.3, 200000)
     ssf = st.number_input(f"กองทุน SSF (สูงสุด {max_ssf:,.0f})", min_value=0.0, max_value=max_ssf, value=0.0, step=5000.0)
 
 with invest_col2:
-    # RMF ซื้อได้สูงสุด 30% ของเงินได้ ไม่เกิน 500,000
     max_rmf = min(total_income * 0.3, 500000)
     rmf = st.number_input(f"กองทุน RMF (สูงสุด {max_rmf:,.0f})", min_value=0.0, max_value=max_rmf, value=0.0, step=5000.0)
 
 with invest_col3:
-    # Thai ESG ซื้อได้สูงสุด 30% ไม่เกิน 300,000 บาท
     max_tesg = min(total_income * 0.3, 300000)
     thai_esg = st.number_input(f"กองทุน Thai ESG (สูงสุด {max_tesg:,.0f})", min_value=0.0, max_value=max_tesg, value=0.0, step=5000.0)
 
-# คำนวณขีดจำกัดรวมกองทุนเพื่อการเกษียณ (SSF + RMF + กองทุนสำรองเลี้ยงชีพ รวมกันห้ามเกิน 500,000 บาท)
 investment_total = ssf + rmf + thai_esg
 total_allowance = family_total + insurance_total + investment_total
 
 
 # --- ส่วนที่ 3: ประมวลผลคำนวณเงินภาษี ---
-# หักค่าใช้จ่ายตามกฎหมาย (50% ของรายได้ แต่ไม่เกิน 100,000 บาท)
 expense = min(total_income * 0.5, 100000)
 net_income = total_income - expense - total_allowance
 if net_income < 0:
     net_income = 0
 
-# ตารางคำนวณขั้นบันไดภาษีของประเทศไทย
+# ตารางภาษีขั้นบันไดไทย
 brackets = [
     (150000, 0.00), (300000, 0.05), (500000, 0.10), (750000, 0.15),
     (1000000, 0.20), (2000000, 0.25), (5000000, 0.30), (float('inf'), 0.35)
@@ -183,11 +165,10 @@ for limit, rate in brackets:
         break
 
 
-# --- ส่วนที่ 4: หน้าจอสรุปผลลัพธ์ (UI สรุปผลเด่นชัด) ---
+# --- ส่วนที่ 4: หน้าจอสรุปผลลัพธ์ ---
 st.write("---")
 st.markdown("### 📊 3. สรุปผลการประเมินภาษี")
 
-# สรุปแบบ Metrics คู่
 m_col1, m_col2 = st.columns(2)
 with m_col1:
     st.metric(label="เงินได้สุทธิ (หลังหักค่าลดหย่อนแล้ว)", value=f"{net_income:,.2f} บาท")
@@ -197,15 +178,15 @@ with m_col2:
     else:
         st.metric(label="ยอดภาษีที่ต้องจ่ายทั้งปี", value="0.00 บาท", delta="คุณได้รับยกเว้นภาษี 🎉")
 
-# กล่องวิเคราะห์แนะนำการออมเงินอัจฉริยะ (Tax Optimizer Feature)
+# กล่องวิเคราะห์แนะนำการออมเงิน
 st.markdown("<div class='summary-box'>", unsafe_allow_html=True)
 st.markdown("🎯 **บทวิเคราะห์และการวางแผน:**")
 if tax_total > 0:
     possible_saving_investment = max_ssf - ssf + max_rmf - rmf + max_tesg - thai_esg
     if possible_saving_investment > 1000:
-        st.markdown(f"💡 คุณยังมีสิทธิซื้อกองทุนลดหย่อนภาษีเหลืออยู่อีกประมาณ **{possible_saving_investment:,.2f} บาท** หากซื้อเพิ่มจะช่วยขยับฐานภาษีให้ต่ำลงและได้เงินคืนเพิ่มขึ้นอีกด้วยนะ!")
+        st.markdown(f"💡 คุณยังมีสิทธิซื้อกองทุนลดหย่อนภาษีเหลืออยู่อีกประมาณ **{possible_saving_investment:,.2f} บาท** หากซื้อเพิ่มจะช่วยขยับฐานภาษีให้ต่ำลงได้เงินคืนเพิ่มด้วยครับ!")
     else:
-        st.markdown("👏 ยอดเยี่ยมมาก! คุณใช้สิทธิลดหย่อนการลงทุนเต็มเพดานหรือสิทธิเกือบสมบูรณ์แล้ว ช่วยเซฟเงินในกระเป๋าได้สูงสุด")
+        st.markdown("👏 ยอดเยี่ยมมาก! คุณใช้สิทธิลดหย่อนการลงทุนเต็มเพดานหรือสิทธิเกือบสมบูรณ์แล้ว ช่วยเซฟเงินได้สูงสุด")
 else:
     st.markdown("✨ รายได้และค่าลดหย่อนในปัจจุบันของคุณสมดุลดีมาก ทำให้คุณไม่มีภาระภาษีที่ต้องชำระในปีนี้ครับ")
 st.markdown("</div>", unsafe_allow_html=True)
@@ -218,12 +199,11 @@ summary_df = pd.DataFrame({
 })
 st.table(summary_df)
 
-# แสดงตารางแจกแจงแบบขั้นบันไดและกราฟวงกลม
+# แสดงตารางขั้นบันไดและกราฟวงกลม
 if tax_total > 0:
     st.subheader("📈 ตารางแจกแจงภาษีตามฐานขั้นบันไดจริง")
     st.dataframe(pd.DataFrame(tax_details), use_container_width=True)
 
-    # วาดรูปกราฟวงกลมแจกแจงการเงิน
     st.subheader("📉 สัดส่วนการกระจายรายได้ของคุณ")
     labels = ['เงินออมคงเหลือหลังภาษี', 'ค่าใช้จ่ายตามกฎหมาย', 'สิทธิประโยชน์ลดหย่อน', 'ภาษีที่ต้องจ่าย']
     sizes = [total_income - expense - total_allowance - tax_total, expense, total_allowance, tax_total]
