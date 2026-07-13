@@ -1,8 +1,14 @@
 import streamlit as st
 import pandas as pd
+
+# --- เพิ่ม 2 บรรทัดนี้ที่บนสุด เพื่อแก้ปัญหา Segmentation fault ---
+import matplotlib
+matplotlib.use('Agg') 
+# -------------------------------------------------------------
+
 import matplotlib.pyplot as plt
 
-# 1. ตั้งค่าหน้าเว็บและดีไซน์เบื้องต้น
+# ตั้งค่าหน้าเว็บและดีไซน์เบื้องต้น (โค้ดส่วนที่เหลือเหมือนเดิมทั้งหมด...)
 st.set_page_config(
     page_title="Thai Tax Calculator Pro 🇹🇭",
     page_icon="💰",
